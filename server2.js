@@ -26,6 +26,6 @@ app.post('/api/codes', (req, res) => {
   res.status(201).json(newCode);
 });
 
-app.listen('/', () => {
+app.listen(PORT, () => {
   console.log(`Server listeniang on port ${PORT}`);
 });
