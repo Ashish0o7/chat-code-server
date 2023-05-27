@@ -99,6 +99,7 @@ const mongoose = require("mongoose");
 const app = express();
 app.use(cors());
 app.use(express.json());
+mongoose.set('strictQuery', false);
 
 // Connect to MongoDB cluster
 mongoose.connect('process.env.MONGODB_URL', { useNewUrlParser: true, useUnifiedTopology: true });
