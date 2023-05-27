@@ -6,7 +6,13 @@ const PORT = 8000;
 const rooms = {};
 const io = socketIO(http);
 // Enable CORS for all routes
-app.use(cors());
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://code-editor-6rqa.onrender.com');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
+
 io.on('connection', (socket) => {
   console.log('A user connected');
 
