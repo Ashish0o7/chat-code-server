@@ -1,16 +1,10 @@
 const app = require('express')();
 const http = require('http').Server(app);
-const io = require('socket.io')(http, {
-  cors: {
-    origin: 'https://code-editor-6rqa.onrender.com/collab', 
-    methods: ['GET', 'POST'],
-    allowedHeaders: ['Content-Type'],
-    credentials: true,
-  },
-});
+const io = require('socket.io');
+const cors = require('cors');
 const PORT = 8000; 
 const rooms = {};
-
+app.use(cors());
 io.on('connection', (socket) => {
   console.log('A user connected');
 
