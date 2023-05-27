@@ -101,7 +101,7 @@ app.use(cors());
 app.use(express.json());
 
 // Connect to MongoDB cluster
-mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect('process.env.MONGODB_URL', { useNewUrlParser: true, useUnifiedTopology: true });
 
 // Create a schema for codes
 const codeSchema = new mongoose.Schema({
@@ -164,14 +164,20 @@ app.post("/api/codes", async (req, res) => {
   }
 });
 
-// API to submit rating for a code
+
 app.post("/api/rating/:codeId", async (req, res) => {
   try {
     const { email, rating } = req.body;
     const codeId = req.params.codeId;
 
+    // Check if the codeId exists in the Code model
+    const codeExists = await Code.exists({ _id: codeId });
+    if (!codeExists) {
+      return res.sendStatus(404);
+    }
+
     const newRating = new Rating({
-      codeId,
+      codeId: mongoose.Types.ObjectId(codeId), // Convert the codeId to ObjectId type
       email,
       rating,
     });
@@ -183,6 +189,8 @@ app.post("/api/rating/:codeId", async (req, res) => {
     res.sendStatus(500);
   }
 });
+
+
 
 app.listen(3001, () => {
   console.log("Server started on port 3001");
