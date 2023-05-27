@@ -1,10 +1,10 @@
 const app = require('express')();
 const http = require('http').Server(app);
-const io = require('socket.io');
+const socketIO = require('socket.io');
 const cors = require('cors');
 const PORT = 8000;
 const rooms = {};
-
+const io = socketIO(http);
 // Enable CORS for all routes
 app.use(cors());
 io.on('connection', (socket) => {
