@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const PORT = 'https://featured-code-server.onrender.com';
+const PORT = 8001;
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 
@@ -26,6 +26,6 @@ app.post('/api/codes', (req, res) => {
   res.status(201).json(newCode);
 });
 
-app.listen(PORT, () => {
+app.listen('/', () => {
   console.log(`Server listeniang on port ${PORT}`);
 });
