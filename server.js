@@ -2,8 +2,10 @@ const app = require('express')();
 const http = require('http').Server(app);
 const io = require('socket.io');
 const cors = require('cors');
-const PORT = 8000; 
+const PORT = 8000;
 const rooms = {};
+
+// Enable CORS for all routes
 app.use(cors());
 io.on('connection', (socket) => {
   console.log('A user connected');
