@@ -69,7 +69,7 @@ socket.on('chat-message', ({ roomId, message, sender }) => {
    
     room.code = code;
 
-   io.in(roomId).emit('code-update', code);
+   socket.in(roomId).emit('code-update', code);
 
     console.log(`Code updated in room ${roomId}`);
   });
