@@ -121,7 +121,6 @@ const ratingSchema = new mongoose.Schema({
 const Code = mongoose.model("Code", codeSchema);
 const Rating = mongoose.model("Rating", ratingSchema);
 
-// API to get all codes with average rating
 app.get("/api/codes", async (req, res) => {
   try {
     const codesWithRating = await Code.aggregate([
@@ -139,8 +138,8 @@ app.get("/api/codes", async (req, res) => {
             $avg: "$ratings.rating",
           },
         },
-      },
-    ]);
+      }
+    ], { "maxTimeMS": 60000 }); 
 
     res.json(codesWithRating);
   } catch (error) {
