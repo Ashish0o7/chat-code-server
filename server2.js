@@ -94,11 +94,11 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-const redis = require("redis");
+
 const app = express();
 app.use(cors());
 app.use(express.json());
-const redisClient = redis.createClient();
+
 // Connect to MongoDB cluster
 mongoose.connect("mongodb+srv://ashishkbazad:Ashish++@cluster0.zf9mbg5.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", { useNewUrlParser: true, useUnifiedTopology: true });
 
@@ -150,37 +150,28 @@ app.post("/api/rating/:codeId", async (req, res) => {
     try {
         const { email, rating } = req.body;
         const codeId = req.params.codeId;
+        
         // Check if there's an existing rating by the same user for the same code
         let existingRating = await Rating.findOne({ codeId, email });
 
         if (existingRating) {
             // Update existing rating
-            // If existing rating found, update it
             const oldRatingValue = existingRating.rating;
             existingRating.rating = rating;
             await existingRating.save();
-
-            const code = await Code.findById(codeId);
-            code.totalRating = code.totalRating - oldRatingValue + rating;
-            await code.save();
         } else {
             // Create new rating
-            // If no existing rating found, create a new rating
             const newRating = new Rating({ codeId, email, rating });
             await newRating.save();
         }
 
-        
+        // Recalculate average rating
         const ratings = await Rating.find({ codeId });
         const totalRating = ratings.reduce((acc, curr) => acc + curr.rating, 0);
-        const averageRating = totalRating / (ratings.length || 1); 
-        await Code.findByIdAndUpdate(codeId, { averageRating });
-           
-            const code = await Code.findById(codeId);
-            code.totalRating += rating;
-            code.ratingCount++;
-            await code.save();
-        
+        const averageRating = totalRating / ratings.length; 
+
+        // Update code with new average rating
+        await Code.findByIdAndUpdate(codeId, { totalRating, ratingCount: ratings.length, averageRating });
 
         res.sendStatus(200);
     } catch (error) {
