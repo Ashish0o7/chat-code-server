@@ -68,8 +68,8 @@ app.post("/api/rating/:codeId", async (req, res) => {
 
         // Rate limiting using Redis
         const key = `user:${email}:rate_limit`;
-        const limit = 2; 
-        const expiration = 60; 
+        const limit = 2; // Maximum number of submissions allowed
+        const expiration = 60; // Time frame in seconds
 
         const currentCount = await getAsync(key);
         if (currentCount === null || parseInt(currentCount) < limit) {
@@ -79,18 +79,19 @@ app.post("/api/rating/:codeId", async (req, res) => {
                 .expire(key, expiration)
                 .exec();
 
+            // Check if there's an existing rating by the same user for the same code
             let existingRating = await Rating.findOne({ codeId, email });
             if (existingRating) {
-               
+                // If existing rating found, update it
                 const oldRatingValue = existingRating.rating;
                 existingRating.rating = rating;
                 await existingRating.save();
-               
+                // Update totalRating by subtracting old rating and adding new rating
                 const code = await Code.findById(codeId);
                 code.totalRating = code.totalRating - oldRatingValue + rating;
                 await code.save();
             } else {
-                
+                // If no existing rating found, create a new rating
                 const newRating = new Rating({ codeId, email, rating });
                 await newRating.save();
                 // Update totalRating and ratingCount in the code document
@@ -101,7 +102,7 @@ app.post("/api/rating/:codeId", async (req, res) => {
             }
             res.sendStatus(200);
         } else {
-           
+            // If rate limit exceeded, display error
             console.error("Rate limit exceeded for user:", email);
             res.status(429).send("Rate limit exceeded. Try again later.");
         }
