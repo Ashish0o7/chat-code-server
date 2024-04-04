@@ -164,18 +164,26 @@ app.post("/api/codes", async (req, res) => {
     }
 });
 
-// API to submit rating for a code
 app.post("/api/rating/:codeId", async (req, res) => {
     try {
         const { email, rating } = req.body;
         const codeId = req.params.codeId;
 
-        const newRating = new Rating({
-            codeId,
-            email,
-            rating,
-        });
-        await newRating.save();
+        let existingRating = await Rating.findOne({ codeId, email });
+
+        if (existingRating) {
+    
+            existingRating.rating = rating;
+            await existingRating.save();
+        } 
+        else {
+            const newRating = new Rating({
+                codeId,
+                email,
+                rating,
+            });
+            await newRating.save();
+        }
 
         res.sendStatus(200);
     } catch (error) {
