@@ -106,8 +106,9 @@ mongoose.connect("mongodb+srv://ashishkbazad:Ashish++@cluster0.zf9mbg5.mongodb.n
 const codeSchema = new mongoose.Schema({
     title: String,
     code: String,
-    totalRating: { type: Number, default: 0 }, // Add totalRating field to codeSchema
-    ratingCount: { type: Number, default: 0 }   // Add ratingCount field to codeSchema
+    email: String,
+    totalRating: { type: Number, default: 0 }, 
+    ratingCount: { type: Number, default: 0 }   
 });
 
 // Create a schema for ratings
@@ -135,8 +136,8 @@ app.get("/api/codes", async (req, res) => {
 // API to add a new code
 app.post("/api/codes", async (req, res) => {
     try {
-        const { title, code } = req.body;
-        const newCode = new Code({ title, code });
+        const { title, code, email } = req.body; 
+        const newCode = new Code({ title, code, email });
         await newCode.save();
         res.sendStatus(201);
     } catch (error) {
@@ -144,7 +145,6 @@ app.post("/api/codes", async (req, res) => {
         res.sendStatus(500);
     }
 });
-
 // API to submit or update rating for a code
 app.post("/api/rating/:codeId", async (req, res) => {
     try {
