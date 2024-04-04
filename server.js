@@ -63,16 +63,26 @@ socket.on('chat-message', ({ roomId, message, sender }) => {
 });
 
 
- socket.on('code-update', ({ roomId, code }) => {
-    let room = rooms[roomId];
+ socket.on('code-update', ({ roomId, code, sender }) => {
+        let room = rooms[roomId];
 
-   
-    room.code = code;
+        if (!room) {
+            room = {
+                users: [],
+                messages: [],
+                code: code,
+            };
+            rooms[roomId] = room;
+        } else {
 
-   socket.in(roomId).emit('code-update', code);
+            room.code = code;
+        }
 
-    console.log(`Code updated in room ${roomId}`);
-  });
+
+        socket.to(roomId).emit('code-update', { roomId, code, sender });
+        console.log(`Code updated in room ${roomId} by ${sender}`);
+    });
+
 
 socket.on('disconnect', () => {
     console.log('A user disconnected');
