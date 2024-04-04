@@ -147,56 +147,31 @@ app.post("/api/codes", async (req, res) => {
 });
 
 
-const redisClient = redis.createClient();
-
-// Rate limiting middleware
-function rateLimitMiddleware(req, res, next) {
-    const userId = req.body.email; 
-    const key = `user:${userId}:ratings`;
-
-    redisClient.incr(key, (err, count) => {
-        if (err) {
-            console.error('Redis error:', err);
-            return res.status(500).send('Internal Server Error');
-        }
-
-        const limit = 2;
-        const expiration = 60; 
-        if (count > limit) {
-            return res.status(429).send('Rate limit exceeded');
-        }
-
-        redisClient.expire(key, expiration);
-
-        next();
-    });
-}
 
 
-app.post("/api/rating/:codeId", rateLimitMiddleware, async (req, res) => {
+
+app.post("/api/rating/:codeId", async (req, res) => {
     try {
         const { email, rating } = req.body;
         const codeId = req.params.codeId;
 
-        // Check if there's an existing rating by the same user for the same code
+       
         let existingRating = await Rating.findOne({ codeId, email });
 
         if (existingRating) {
-            // If existing rating found, update it
             const oldRatingValue = existingRating.rating;
             existingRating.rating = rating;
             await existingRating.save();
 
-            // Update totalRating by subtracting old rating and adding new rating
             const code = await Code.findById(codeId);
             code.totalRating = code.totalRating - oldRatingValue + rating;
             await code.save();
         } else {
-            // If no existing rating found, create a new rating
+          
             const newRating = new Rating({ codeId, email, rating });
             await newRating.save();
 
-            // Update totalRating and ratingCount in the code document
+          
             const code = await Code.findById(codeId);
             code.totalRating += rating;
             code.ratingCount++;
