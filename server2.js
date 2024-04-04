@@ -91,7 +91,6 @@
 // app.listen(PORT, () => {
 //   console.log(`Server listening on port ${PORT}`);
 // });
-
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
@@ -107,6 +106,7 @@ mongoose.connect("mongodb+srv://ashishkbazad:Ashish++@cluster0.zf9mbg5.mongodb.n
 const codeSchema = new mongoose.Schema({
     title: String,
     code: String,
+    averageRating: { type: Number, default: 0 } // Add averageRating field to codeSchema
 });
 
 // Create a schema for ratings
@@ -123,25 +123,8 @@ const Rating = mongoose.model("Rating", ratingSchema);
 // API to get all codes with average rating
 app.get("/api/codes", async (req, res) => {
     try {
-        const codesWithRating = await Code.aggregate([
-            {
-                $lookup: {
-                    from: "ratings",
-                    localField: "_id",
-                    foreignField: "codeId",
-                    as: "ratings",
-                },
-            },
-            {
-                $addFields: {
-                    averageRating: {
-                        $avg: "$ratings.rating",
-                    },
-                },
-            },
-        ]);
-
-        res.json(codesWithRating);
+        const codes = await Code.find();
+        res.json(codes);
     } catch (error) {
         console.error("Error fetching codes:", error);
         res.sendStatus(500);
@@ -152,10 +135,7 @@ app.get("/api/codes", async (req, res) => {
 app.post("/api/codes", async (req, res) => {
     try {
         const { title, code } = req.body;
-        const newCode = new Code({
-            title,
-            code,
-        });
+        const newCode = new Code({ title, code });
         await newCode.save();
         res.sendStatus(201);
     } catch (error) {
@@ -164,26 +144,30 @@ app.post("/api/codes", async (req, res) => {
     }
 });
 
+// API to submit or update rating for a code
 app.post("/api/rating/:codeId", async (req, res) => {
     try {
         const { email, rating } = req.body;
         const codeId = req.params.codeId;
 
+        // Check if there's an existing rating by the same user for the same code
         let existingRating = await Rating.findOne({ codeId, email });
 
         if (existingRating) {
-    
+            // Update existing rating
             existingRating.rating = rating;
             await existingRating.save();
-        } 
-        else {
-            const newRating = new Rating({
-                codeId,
-                email,
-                rating,
-            });
+        } else {
+            // Create new rating
+            const newRating = new Rating({ codeId, email, rating });
             await newRating.save();
         }
+
+        // Recalculate average rating for the code and update it
+        const ratings = await Rating.find({ codeId });
+        const totalRating = ratings.reduce((acc, curr) => acc + curr.rating, 0);
+        const averageRating = totalRating / (ratings.length || 1); // To handle divide by zero
+        await Code.findByIdAndUpdate(codeId, { averageRating });
 
         res.sendStatus(200);
     } catch (error) {
