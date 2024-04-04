@@ -106,7 +106,8 @@ mongoose.connect("mongodb+srv://ashishkbazad:Ashish++@cluster0.zf9mbg5.mongodb.n
 const codeSchema = new mongoose.Schema({
     title: String,
     code: String,
-    averageRating: { type: Number, default: 0 } // Add averageRating field to codeSchema
+    totalRating: { type: Number, default: 0 }, // Add totalRating field to codeSchema
+    ratingCount: { type: Number, default: 0 }   // Add ratingCount field to codeSchema
 });
 
 // Create a schema for ratings
@@ -154,20 +155,26 @@ app.post("/api/rating/:codeId", async (req, res) => {
         let existingRating = await Rating.findOne({ codeId, email });
 
         if (existingRating) {
-            // Update existing rating
+            // If existing rating found, update it
+            const oldRatingValue = existingRating.rating;
             existingRating.rating = rating;
             await existingRating.save();
+
+            // Update totalRating by subtracting old rating and adding new rating
+            const code = await Code.findById(codeId);
+            code.totalRating = code.totalRating - oldRatingValue + rating;
+            await code.save();
         } else {
-            // Create new rating
+            // If no existing rating found, create a new rating
             const newRating = new Rating({ codeId, email, rating });
             await newRating.save();
-        }
 
-        // Recalculate average rating for the code and update it
-        const ratings = await Rating.find({ codeId });
-        const totalRating = ratings.reduce((acc, curr) => acc + curr.rating, 0);
-        const averageRating = totalRating / (ratings.length || 1); // To handle divide by zero
-        await Code.findByIdAndUpdate(codeId, { averageRating });
+            // Update totalRating and ratingCount in the code document
+            const code = await Code.findById(codeId);
+            code.totalRating += rating;
+            code.ratingCount++;
+            await code.save();
+        }
 
         res.sendStatus(200);
     } catch (error) {
