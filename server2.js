@@ -180,7 +180,7 @@ app.post("/api/rating/:codeId", async (req, res) => {
             code.totalRating += rating;
             code.ratingCount++;
             await code.save();
-        }
+        
 
         res.sendStatus(200);
     } catch (error) {
