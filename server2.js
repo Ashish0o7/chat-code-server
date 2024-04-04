@@ -99,10 +99,9 @@ const mongoose = require("mongoose");
 const app = express();
 app.use(cors());
 app.use(express.json());
-mongoose.set('strictQuery', false);
 
 // Connect to MongoDB cluster
-mongoose.connect('process.env.MONGODB_URL', { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTopology: true });
 
 // Create a schema for codes
 const codeSchema = new mongoose.Schema({
@@ -120,34 +119,27 @@ const ratingSchema = new mongoose.Schema({
 // Create models for codes and ratings
 const Code = mongoose.model("Code", codeSchema);
 const Rating = mongoose.model("Rating", ratingSchema);
+
+// API to get all codes with average rating
 app.get("/api/codes", async (req, res) => {
   try {
-
-    const codes = await Code.find();
-
-
-    const ratings = await Rating.find();
-
-  
-    const ratingMap = {};
-    ratings.forEach(rating => {
-      if (!ratingMap[rating.codeId]) {
-        ratingMap[rating.codeId] = [];
-      }
-      ratingMap[rating.codeId].push(rating.rating);
-    });
-
-    // Calculate average rating for each code
-    const codesWithRating = codes.map(code => {
-      const ratingsForCode = ratingMap[code._id] || [];
-      const averageRating = ratingsForCode.length > 0 ? ratingsForCode.reduce((acc, cur) => acc + cur, 0) / ratingsForCode.length : 0;
-      return {
-        _id: code._id,
-        title: code.title,
-        code: code.code,
-        averageRating
-      };
-    });
+    const codesWithRating = await Code.aggregate([
+      {
+        $lookup: {
+          from: "ratings",
+          localField: "_id",
+          foreignField: "codeId",
+          as: "ratings",
+        },
+      },
+      {
+        $addFields: {
+          averageRating: {
+            $avg: "$ratings.rating",
+          },
+        },
+      },
+    ]);
 
     res.json(codesWithRating);
   } catch (error) {
@@ -172,36 +164,18 @@ app.post("/api/codes", async (req, res) => {
   }
 });
 
-
+// API to submit rating for a code
 app.post("/api/rating/:codeId", async (req, res) => {
   try {
     const { email, rating } = req.body;
     const codeId = req.params.codeId;
 
-    if (!email || email.trim() === '') {
-      return res.status(400).send("Email is required.");
-    }
-
-  
-    const codeExists = await Code.exists({ _id: codeId });
-    if (!codeExists) {
-      return res.sendStatus(404);
-    }
-
-   
-    let existingRating = await Rating.findOne({ codeId, email });
-
-    if (existingRating) {
-      existingRating.rating = rating;
-      await existingRating.save();
-    } else {
-      const newRating = new Rating({
-        codeId: mongoose.Types.ObjectId(codeId),
-        email,
-        rating,
-      });
-      await newRating.save();
-    }
+    const newRating = new Rating({
+      codeId,
+      email,
+      rating,
+    });
+    await newRating.save();
 
     res.sendStatus(200);
   } catch (error) {
@@ -209,7 +183,6 @@ app.post("/api/rating/:codeId", async (req, res) => {
     res.sendStatus(500);
   }
 });
-
 
 app.listen(3001, () => {
   console.log("Server started on port 3001");
