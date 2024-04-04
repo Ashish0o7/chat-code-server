@@ -146,51 +146,43 @@ app.post("/api/codes", async (req, res) => {
     }
 });
 
-
-
-
-
 app.post("/api/rating/:codeId", async (req, res) => {
     try {
         const { email, rating } = req.body;
         const codeId = req.params.codeId;
+        // Check if there's an existing rating by the same user for the same code
+        let existingRating = await Rating.findOne({ codeId, email });
 
-        // Rate limiting logic using Redis
-        const key = `user:${email}:ratings`;
-        redisClient.incr(key, async (err, count) => {
-            if (err) {
-                console.error('Redis error:', err);
-                return res.status(500).send('Internal Server Error');
-            }
+        if (existingRating) {
+            // Update existing rating
+            // If existing rating found, update it
+            const oldRatingValue = existingRating.rating;
+            existingRating.rating = rating;
+            await existingRating.save();
 
-            const limit = 2; // Adjust the rate limit as needed
-            if (count > limit) {
-                return res.status(429).send('Rate limit exceeded');
-            }
+            const code = await Code.findById(codeId);
+            code.totalRating = code.totalRating - oldRatingValue + rating;
+            await code.save();
+        } else {
+            // Create new rating
+            // If no existing rating found, create a new rating
+            const newRating = new Rating({ codeId, email, rating });
+            await newRating.save();
+        }
 
-            // If rate limit not exceeded, proceed with rating submission
-            let existingRating = await Rating.findOne({ codeId, email });
+        
+        const ratings = await Rating.find({ codeId });
+        const totalRating = ratings.reduce((acc, curr) => acc + curr.rating, 0);
+        const averageRating = totalRating / (ratings.length || 1); 
+        await Code.findByIdAndUpdate(codeId, { averageRating });
+           
+            const code = await Code.findById(codeId);
+            code.totalRating += rating;
+            code.ratingCount++;
+            await code.save();
+        }
 
-            if (existingRating) {
-                const oldRatingValue = existingRating.rating;
-                existingRating.rating = rating;
-                await existingRating.save();
-
-                const code = await Code.findById(codeId);
-                code.totalRating = code.totalRating - oldRatingValue + rating;
-                await code.save();
-            } else {
-                const newRating = new Rating({ codeId, email, rating });
-                await newRating.save();
-
-                const code = await Code.findById(codeId);
-                code.totalRating += rating;
-                code.ratingCount++;
-                await code.save();
-            }
-
-            res.sendStatus(200);
-        });
+        res.sendStatus(200);
     } catch (error) {
         console.error("Error submitting rating:", error);
         res.sendStatus(500);
