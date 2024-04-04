@@ -171,18 +171,30 @@ app.post("/api/rating/:codeId", async (req, res) => {
     const { email, rating } = req.body;
     const codeId = req.params.codeId;
 
-    // Check if the codeId exists in the Code model
+    if (!email || email.trim() === '') {
+      return res.status(400).send("Email is required.");
+    }
+
+  
     const codeExists = await Code.exists({ _id: codeId });
     if (!codeExists) {
       return res.sendStatus(404);
     }
 
-    const newRating = new Rating({
-      codeId: mongoose.Types.ObjectId(codeId), // Convert the codeId to ObjectId type
-      email,
-      rating,
-    });
-    await newRating.save();
+   
+    let existingRating = await Rating.findOne({ codeId, email });
+
+    if (existingRating) {
+      existingRating.rating = rating;
+      await existingRating.save();
+    } else {
+      const newRating = new Rating({
+        codeId: mongoose.Types.ObjectId(codeId),
+        email,
+        rating,
+      });
+      await newRating.save();
+    }
 
     res.sendStatus(200);
   } catch (error) {
@@ -190,7 +202,6 @@ app.post("/api/rating/:codeId", async (req, res) => {
     res.sendStatus(500);
   }
 });
-
 
 
 app.listen(3001, () => {
