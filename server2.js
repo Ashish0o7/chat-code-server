@@ -101,19 +101,19 @@ app.use(cors());
 app.use(express.json());
 
 // Connect to MongoDB cluster
-mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect("mongodb+srv://ashishkbazad:Ashish++@cluster0.zf9mbg5.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", { useNewUrlParser: true, useUnifiedTopology: true });
 
 // Create a schema for codes
 const codeSchema = new mongoose.Schema({
-  title: String,
-  code: String,
+    title: String,
+    code: String,
 });
 
 // Create a schema for ratings
 const ratingSchema = new mongoose.Schema({
-  codeId: mongoose.Schema.Types.ObjectId,
-  email: String,
-  rating: Number,
+    codeId: mongoose.Schema.Types.ObjectId,
+    email: String,
+    rating: Number,
 });
 
 // Create models for codes and ratings
@@ -122,68 +122,68 @@ const Rating = mongoose.model("Rating", ratingSchema);
 
 // API to get all codes with average rating
 app.get("/api/codes", async (req, res) => {
-  try {
-    const codesWithRating = await Code.aggregate([
-      {
-        $lookup: {
-          from: "ratings",
-          localField: "_id",
-          foreignField: "codeId",
-          as: "ratings",
-        },
-      },
-      {
-        $addFields: {
-          averageRating: {
-            $avg: "$ratings.rating",
-          },
-        },
-      },
-    ]);
+    try {
+        const codesWithRating = await Code.aggregate([
+            {
+                $lookup: {
+                    from: "ratings",
+                    localField: "_id",
+                    foreignField: "codeId",
+                    as: "ratings",
+                },
+            },
+            {
+                $addFields: {
+                    averageRating: {
+                        $avg: "$ratings.rating",
+                    },
+                },
+            },
+        ]);
 
-    res.json(codesWithRating);
-  } catch (error) {
-    console.error("Error fetching codes:", error);
-    res.sendStatus(500);
-  }
+        res.json(codesWithRating);
+    } catch (error) {
+        console.error("Error fetching codes:", error);
+        res.sendStatus(500);
+    }
 });
 
 // API to add a new code
 app.post("/api/codes", async (req, res) => {
-  try {
-    const { title, code } = req.body;
-    const newCode = new Code({
-      title,
-      code,
-    });
-    await newCode.save();
-    res.sendStatus(201);
-  } catch (error) {
-    console.error("Error adding code:", error);
-    res.sendStatus(500);
-  }
+    try {
+        const { title, code } = req.body;
+        const newCode = new Code({
+            title,
+            code,
+        });
+        await newCode.save();
+        res.sendStatus(201);
+    } catch (error) {
+        console.error("Error adding code:", error);
+        res.sendStatus(500);
+    }
 });
 
 // API to submit rating for a code
 app.post("/api/rating/:codeId", async (req, res) => {
-  try {
-    const { email, rating } = req.body;
-    const codeId = req.params.codeId;
+    try {
+        const { email, rating } = req.body;
+        const codeId = req.params.codeId;
 
-    const newRating = new Rating({
-      codeId,
-      email,
-      rating,
-    });
-    await newRating.save();
+        const newRating = new Rating({
+            codeId,
+            email,
+            rating,
+        });
+        await newRating.save();
 
-    res.sendStatus(200);
-  } catch (error) {
-    console.error("Error submitting rating:", error);
-    res.sendStatus(500);
-  }
+        res.sendStatus(200);
+    } catch (error) {
+        console.error("Error submitting rating:", error);
+        res.sendStatus(500);
+    }
 });
 
 app.listen(3001, () => {
-  console.log("Server started on port 3001");
+    console.log("Server started on port 3001");
 });
