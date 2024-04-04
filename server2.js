@@ -172,6 +172,7 @@ function rateLimitMiddleware(req, res, next) {
     });
 }
 
+
 app.post("/api/rating/:codeId", rateLimitMiddleware, async (req, res) => {
     try {
         const { email, rating } = req.body;
@@ -205,9 +206,10 @@ app.post("/api/rating/:codeId", rateLimitMiddleware, async (req, res) => {
         res.sendStatus(200);
     } catch (error) {
         console.error("Error submitting rating:", error);
-        res.sendStatus(500);
+        res.status(500).send("Error submitting rating: " + error.message); // Send error response with message
     }
 });
+
 
 app.listen(3001, () => {
     console.log("Server started on port 3001");
