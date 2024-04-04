@@ -98,7 +98,7 @@ const redis = require("redis");
 const app = express();
 app.use(cors());
 app.use(express.json());
-
+const redisClient = redis.createClient();
 // Connect to MongoDB cluster
 mongoose.connect("mongodb+srv://ashishkbazad:Ashish++@cluster0.zf9mbg5.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", { useNewUrlParser: true, useUnifiedTopology: true });
 
@@ -155,36 +155,47 @@ app.post("/api/rating/:codeId", async (req, res) => {
         const { email, rating } = req.body;
         const codeId = req.params.codeId;
 
-       
-        let existingRating = await Rating.findOne({ codeId, email });
+        // Rate limiting logic using Redis
+        const key = `user:${email}:ratings`;
+        redisClient.incr(key, async (err, count) => {
+            if (err) {
+                console.error('Redis error:', err);
+                return res.status(500).send('Internal Server Error');
+            }
 
-        if (existingRating) {
-            const oldRatingValue = existingRating.rating;
-            existingRating.rating = rating;
-            await existingRating.save();
+            const limit = 2; // Adjust the rate limit as needed
+            if (count > limit) {
+                return res.status(429).send('Rate limit exceeded');
+            }
 
-            const code = await Code.findById(codeId);
-            code.totalRating = code.totalRating - oldRatingValue + rating;
-            await code.save();
-        } else {
-          
-            const newRating = new Rating({ codeId, email, rating });
-            await newRating.save();
+            // If rate limit not exceeded, proceed with rating submission
+            let existingRating = await Rating.findOne({ codeId, email });
 
-          
-            const code = await Code.findById(codeId);
-            code.totalRating += rating;
-            code.ratingCount++;
-            await code.save();
-        }
+            if (existingRating) {
+                const oldRatingValue = existingRating.rating;
+                existingRating.rating = rating;
+                await existingRating.save();
 
-        res.sendStatus(200);
+                const code = await Code.findById(codeId);
+                code.totalRating = code.totalRating - oldRatingValue + rating;
+                await code.save();
+            } else {
+                const newRating = new Rating({ codeId, email, rating });
+                await newRating.save();
+
+                const code = await Code.findById(codeId);
+                code.totalRating += rating;
+                code.ratingCount++;
+                await code.save();
+            }
+
+            res.sendStatus(200);
+        });
     } catch (error) {
         console.error("Error submitting rating:", error);
-        res.status(500).send("Error submitting rating: " + error.message); // Send error response with message
+        res.sendStatus(500);
     }
 });
-
 
 app.listen(3001, () => {
     console.log("Server started on port 3001");
