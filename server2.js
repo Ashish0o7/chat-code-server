@@ -120,26 +120,34 @@ const ratingSchema = new mongoose.Schema({
 // Create models for codes and ratings
 const Code = mongoose.model("Code", codeSchema);
 const Rating = mongoose.model("Rating", ratingSchema);
-
 app.get("/api/codes", async (req, res) => {
   try {
-    const codesWithRating = await Code.aggregate([
-      {
-        $lookup: {
-          from: "ratings",
-          localField: "_id",
-          foreignField: "codeId",
-          as: "ratings",
-        },
-      },
-      {
-        $addFields: {
-          averageRating: {
-            $avg: "$ratings.rating",
-          },
-        },
+
+    const codes = await Code.find();
+
+
+    const ratings = await Rating.find();
+
+  
+    const ratingMap = {};
+    ratings.forEach(rating => {
+      if (!ratingMap[rating.codeId]) {
+        ratingMap[rating.codeId] = [];
       }
-    ], { "maxTimeMS": 60000 }); 
+      ratingMap[rating.codeId].push(rating.rating);
+    });
+
+    // Calculate average rating for each code
+    const codesWithRating = codes.map(code => {
+      const ratingsForCode = ratingMap[code._id] || [];
+      const averageRating = ratingsForCode.length > 0 ? ratingsForCode.reduce((acc, cur) => acc + cur, 0) / ratingsForCode.length : 0;
+      return {
+        _id: code._id,
+        title: code.title,
+        code: code.code,
+        averageRating
+      };
+    });
 
     res.json(codesWithRating);
   } catch (error) {
