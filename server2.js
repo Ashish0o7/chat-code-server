@@ -94,7 +94,7 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-
+const redis = require("redis");
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -145,8 +145,34 @@ app.post("/api/codes", async (req, res) => {
         res.sendStatus(500);
     }
 });
-// API to submit or update rating for a code
-app.post("/api/rating/:codeId", async (req, res) => {
+
+
+const redisClient = redis.createClient();
+
+// Rate limiting middleware
+function rateLimitMiddleware(req, res, next) {
+    const userId = req.body.email; 
+    const key = `user:${userId}:ratings`;
+
+    redisClient.incr(key, (err, count) => {
+        if (err) {
+            console.error('Redis error:', err);
+            return res.status(500).send('Internal Server Error');
+        }
+
+        const limit = 2;
+        const expiration = 60; 
+        if (count > limit) {
+            return res.status(429).send('Rate limit exceeded');
+        }
+
+        redisClient.expire(key, expiration);
+
+        next();
+    });
+}
+
+app.post("/api/rating/:codeId", rateLimitMiddleware, async (req, res) => {
     try {
         const { email, rating } = req.body;
         const codeId = req.params.codeId;
