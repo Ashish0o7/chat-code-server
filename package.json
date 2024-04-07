@@ -8,6 +8,7 @@
     "start": "node server2.js"
   },
   "dependencies": {
+    "axios": "^0.27.2", 
     "express": "^4.17.1",
     "cors": "^2.8.5",
     "mongoose": "^6.0.4",
