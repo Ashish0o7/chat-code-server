@@ -141,12 +141,12 @@ app.post('/compile', rateLimit, async (req, res) => {
 
     const options = {
         method: "POST",
-        url: "YOUR_EXTERNAL_API_ENDPOINT",
+        url: process.env.REACT_APP_RAPID_API_URL,
         params: { base64_encoded: "true", fields: "*" },
         headers: {
             "content-type": "application/json",
-            "X-RapidAPI-Host": "YOUR_RAPID_API_HOST",
-            "X-RapidAPI-Key": "YOUR_RAPID_API_KEY",
+            "X-RapidAPI-Host": process.env.REACT_APP_RAPID_API_HOST,
+            "X-RapidAPI-Key": process.env.REACT_APP_RAPID_API_KEY,
         },
         data: {
             language_id,
