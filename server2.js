@@ -107,6 +107,59 @@ app.post("/api/rating/:codeId", async (req, res) => {
         res.sendStatus(500);
     }
 });
+
+const rateLimit = async (req, res, next) => {
+    const userEmail = req.body.email; 
+    const key = `rate_limit:${userEmail}`;
+    const limit = 3; 
+    const duration = 60;
+
+    try {
+        const requestCount = await client.get(key);
+        if (requestCount && parseInt(requestCount) >= limit) {
+            return res.status(429).json({ message: 'Rate limit exceeded' });
+        }
+
+        if (requestCount) {
+            await client.incr(key);
+        } else {
+            await client.setEx(key, duration, 1);
+        }
+
+        next();
+    } catch (error) {
+        console.error('Error in rate limiting:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+app.post('/compile', rateLimit, async (req, res) => {
+    const { language_id, source_code, stdin, email } = req.body; // Include email in the destructured data
+
+    const options = {
+        method: "POST",
+        url: "YOUR_EXTERNAL_API_ENDPOINT",
+        params: { base64_encoded: "true", fields: "*" },
+        headers: {
+            "content-type": "application/json",
+            "X-RapidAPI-Host": "YOUR_RAPID_API_HOST",
+            "X-RapidAPI-Key": "YOUR_RAPID_API_KEY",
+        },
+        data: {
+            language_id,
+            source_code,
+            stdin
+        },
+    };
+    try {
+        const response = await axios.request(options);
+        res.json(response.data);
+    } catch (error) {
+        console.log('Error calling external API:', error);
+        res.status(500).send('Internal Server Error');
+    }
+    
+});
 async function initialize() {
     try {
         await client.connect();
