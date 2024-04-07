@@ -112,7 +112,7 @@ const rateLimit = async (req, res, next) => {
     const userEmail = req.body.email; 
     const key = `rate_limit:${userEmail}`;
     const limit = 3; 
-    const duration = 60;
+    const duration = 60; 
 
     try {
         const requestCount = await client.get(key);
@@ -123,7 +123,8 @@ const rateLimit = async (req, res, next) => {
         if (requestCount) {
             await client.incr(key);
         } else {
-            await client.setEx(key, duration, 1);
+            // Convert the value '1' to a string
+            await client.setEx(key, duration, '1');
         }
 
         next();
@@ -132,6 +133,7 @@ const rateLimit = async (req, res, next) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
+
 
 app.post('/compile', rateLimit, async (req, res) => {
     const { language_id, source_code, stdin, email } = req.body; // Include email in the destructured data
