@@ -20,8 +20,8 @@ const client = createClient({
 });
 
 client.on('error', (err) => console.log('Redis Client Error', err));
-await client.connect();
-// Connect to MongoDB cluster
+
+
 mongoose.connect("mongodb+srv://ashishkbazad:Ashish++@cluster0.zf9mbg5.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", { useNewUrlParser: true, useUnifiedTopology: true });
 // Create a schema for codes
 const codeSchema = new mongoose.Schema({
@@ -107,6 +107,17 @@ app.post("/api/rating/:codeId", async (req, res) => {
         res.sendStatus(500);
     }
 });
-app.listen(3001, () => {
-    console.log("Server started on port 3001");
-});
+async function initialize() {
+    try {
+        await client.connect();
+        console.log('Connected to Redis');
+
+        app.listen(3001, () => {
+            console.log("Server started on port 3001");
+        });
+    } catch (err) {
+        console.error('Error initializing the application:', err);
+    }
+}
+
+initialize();
