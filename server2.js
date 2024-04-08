@@ -6,7 +6,13 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 
 const app = express();
-app.use(cors());
+const corsOptions = {
+  origin: 'https://code-editor-6rqa.onrender.com',
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+
 app.use(express.json());
 
 
