@@ -163,6 +163,85 @@ app.post('/compile', rateLimit, async (req, res) => {
     }
     
 });
+
+/* question logic here */
+const questionSchema = new mongoose.Schema({
+    title: String,
+    email: String,
+    constraints: String,
+    examples: String,
+    testcase: String,
+    hiddenTestcase: String,
+    description: String
+    // Additional fields as required
+});
+
+const Question = mongoose.model("Question", questionSchema);
+
+app.post("/api/questions", async (req, res) => {
+    try {
+        const newQuestion = new Question(req.body);
+        await newQuestion.save();
+        await client.del("api_questions"); // Clear the cache
+        res.status(201).send(newQuestion);
+    } catch (error) {
+        console.error("Error adding question:", error);
+        res.sendStatus(500);
+    }
+});
+
+app.get("/api/questions", async (req, res) => {
+    const cacheKey = "api_questions";
+    try {
+        const cachedQuestions = await client.get(cacheKey);
+        if (cachedQuestions) {
+            return res.status(200).json(JSON.parse(cachedQuestions));
+        } else {
+            const questions = await Question.find();
+            await client.setEx(cacheKey, 3600, JSON.stringify(questions)); // Cache for 1 hour
+            res.status(200).json(questions);
+        }
+    } catch (error) {
+        console.error("Error fetching questions:", error);
+        res.sendStatus(500);
+    }
+});
+
+app.get("/api/questions/:id", async (req, res) => {
+    try {
+        console.log(`Received request for question ID: ${req.params.id}`);
+
+        const question = await Question.findById(req.params.id);
+        if (question) {
+            res.status(200).send(question);
+        } else {
+            res.status(404).send({ message: 'Question not found' });
+        }
+    } catch (error) {
+        console.error("Error fetching question:", error);
+        res.status(500).send({ message: 'Internal Server Error' });
+    }
+});
+
+app.delete("/api/questions/:id", async (req, res) => {
+    const { id } = req.params;
+    const userEmail = req.body.email;
+
+    try {
+        const question = await Question.findById(id);
+        if (question && question.email === userEmail) {
+            await Question.deleteOne({ _id: id });
+            await client.del("api_questions"); // Clear the cache
+            res.status(200).send({ message: 'Question deleted successfully' });
+        } else {
+            res.status(403).send({ message: 'Unauthorized to delete this question' });
+        }
+    } catch (error) {
+        console.error("Error deleting question:", error);
+        res.sendStatus(500);
+    }
+});
+
 async function initialize() {
     try {
         await client.connect();
