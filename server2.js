@@ -7,11 +7,17 @@ const mongoose = require("mongoose");
 
 const app = express();
 
+// Custom CORS configuration
+const corsOptions = {
+  origin: 'https://code-editor-6rqa.onrender.com', 
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type'],
+  credentials: true,
+};
 
-app.use(cors());
+app.use(cors(corsOptions));
 
 app.use(express.json());
-
 
 
 
